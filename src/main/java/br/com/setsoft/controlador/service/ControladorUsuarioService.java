@@ -16,14 +16,10 @@ public class ControladorUsuarioService extends CrudGenerico<Usuario, Integer> im
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-
-	@Override
-	protected Class<Usuario> getClassePersistente() {
-		return Usuario.class;
-	}
-
+	
 	@Override
 	protected EntityManager getEntityManager() {
+		
 		return Fabrica.getEntityManager();
 	}
 	
