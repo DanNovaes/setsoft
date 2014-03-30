@@ -33,7 +33,7 @@ public class NumericoUtil {
 		
 		BigDecimal dividendoParam = new BigDecimal(dividendo.toString());
 		
-		return dividendoParam.divide(divisorParam);
+		return dividendoParam.divide(divisorParam, 32, BigDecimal.ROUND_HALF_EVEN);
 	}
 	
 	//TODO criar teste
@@ -64,5 +64,13 @@ public class NumericoUtil {
 	public static String  valorComoString(BigDecimal valor) {
 		
 		return valor == null ? null : valor.setScale(2, BigDecimal.ROUND_HALF_EVEN).toString();
+	}
+	
+	//TODO criar teste
+	public static BigDecimal percentual(Number valorTotal, Number valorPacial) {
+		
+		BigDecimal quociente = dividir(valorPacial, valorTotal);
+		
+		return trocaNuloPorZero(quociente).multiply(new BigDecimal("100.00"));
 	}
 }
