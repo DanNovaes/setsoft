@@ -10,18 +10,17 @@ package br.com.setsoft.crud;
  * @author Joel Marques
  */
 import java.io.Serializable;
+import java.lang.reflect.ParameterizedType;
 import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 
-import org.hibernate.Criteria;
-import org.hibernate.Session;
-import org.hibernate.criterion.Example;
-import org.hibernate.criterion.MatchMode;
-
 import br.com.setsoft.interfaces.ICrudGenerico;
 import br.com.setsoft.interfaces.IEntidadeBase;
+import br.com.setsoft.utilidade.JPAUtil.Filter;
+import br.com.setsoft.utilidade.JPAUtil.IQueryBuilder;
+import br.com.setsoft.utilidade.JPAUtil.DynamicQueryBuilder;
 
 public abstract class CrudGenerico<T extends IEntidadeBase<PK>, PK extends Serializable> implements ICrudGenerico<T, PK> {
 
@@ -35,6 +34,7 @@ public abstract class CrudGenerico<T extends IEntidadeBase<PK>, PK extends Seria
 	 */	
 	@Override
 	public T buscarPorChave(PK primaryKey) {
+		
 		return getEntityManager().find(getClassePersistente(), primaryKey);
 	}
 
@@ -50,22 +50,21 @@ public abstract class CrudGenerico<T extends IEntidadeBase<PK>, PK extends Seria
 	@SuppressWarnings("unchecked")
 	public List<T> buscarPorFiltro(T filtro) {		
 		
-		Session session = (Session) getEntityManager().getDelegate();
-		Example example = criaExemplo(filtro);
-		Criteria criteria = session.createCriteria(filtro.getClass()).add(example);
+		IQueryBuilder queryBuild = new DynamicQueryBuilder(this.criarFiltro(filtro), this.getEntityManager());
 		
-		return (List<T>) criteria.list();	
+	    return queryBuild.getQuery().getResultList();
 	}
 	
-	public Example criaExemplo(T filtro){
+	private Filter criarFiltro(T entity) {
 		
-		Example example = Example.create(filtro);
-		example.enableLike(MatchMode.ANYWHERE);
-		example.excludeZeroes();
-		example.ignoreCase();
+		Filter filter = Filter.create(entity);
 		
-		return example;
+		this.addRestriction(filter, entity);
+		
+		return filter;
 	}
+	
+	protected void addRestriction(Filter filter, T entity) {}
 
 	/**
 	 * Busca todos os registros do tipo especificado.
@@ -127,17 +126,15 @@ public abstract class CrudGenerico<T extends IEntidadeBase<PK>, PK extends Seria
 //		System.out.println("Excluído com sucesso o objeto: "+objeto.getClass().getSimpleName());
 	}
 	
-	protected abstract Class<T> getClassePersistente();
+	@SuppressWarnings("unchecked")
+	private Class<T> getClassePersistente() {
+		
+		return (Class<T>) ((ParameterizedType)getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+	}
 
 	protected abstract EntityManager getEntityManager();
 	
-	public boolean isNull(Object object) {
-		
-		return object == null;
-	}
+	public boolean isNull(Object object) {return object == null;}
 	
-	public boolean isNotNull(Object object) {
-		
-		return object != null;
-	}
+	public boolean isNotNull(Object object) {return object != null;}
 }
