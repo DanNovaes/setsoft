@@ -10,49 +10,90 @@ import javax.faces.convert.FacesConverter;
 import br.com.setsoft.interfaces.IEntidadeBase;
 
 @FacesConverter(value = "conversorEntidadeGenerico")
-public class ConversorEntidadeGenerico implements Converter{
+public class ConversorEntidadeGenerico implements Converter {
 	
 	@Override 
-	public Object getAsObject(FacesContext ctx, UIComponent component, String value) {
+	public Object getAsObject(FacesContext ctx, UIComponent component, String primaryKey) {
 		
-        if (value != null) {  
-            return this.getAttributesFrom(component).get(value);  
-        }
-        
-        return null;  
-    } 
-	  
+        return this.getEntity(component, primaryKey); 
+    }
+	
 	@Override    
+	public String getAsString(FacesContext ctx, UIComponent component, Object entity) {
+		
+		return this.getPrimaryKey(component, entity);  
+    }
+	
+	private Object getEntity(UIComponent component, String primaryKey) {
+		
+		if (this.isNotBlank(primaryKey)) {
+			
+			Map<String, Object> attributes = this.getAttributesFrom(component);
+			
+			if (this.isNotNull(attributes)) {
+				return attributes.get(primaryKey);
+			}
+		}
+		
+        return null;
+    }
+	
+	private String getPrimaryKey(UIComponent component, Object entity) {
+		
+		String primaryKey = this.getPrimaryKey(entity);
+		
+		//add primary key to component.
+		this.addAttribute(component, primaryKey, entity);
+		
+		return primaryKey;
+	}
+	
 	@SuppressWarnings("rawtypes")
-	public String getAsString(FacesContext ctx, UIComponent component, Object value) {  
-	  
-        if (value != null && !"".equals(value)) { 
-  
-            IEntidadeBase entity = (IEntidadeBase) value;  
-  
-            // adiciona item como atributo do componente  
-            this.addAttribute(component, entity);  
-  
-            Object codigo = entity.getPK();
-            
-            if (codigo != null) {  
-                return String.valueOf(codigo);  
-            }  
-        }  
-  
-        return (String) value;  
-    } 
-	  
-    @SuppressWarnings("rawtypes")
-	protected void addAttribute(UIComponent component, IEntidadeBase o) {
-    	
-        String key = o.getPK().toString(); // codigo da entidade como chave neste caso  
-        this.getAttributesFrom(component).put(key, o);  
+	private String getPrimaryKey(Object entity) {
+		
+		if (this.isInstanceOfIEntidadeBase(entity)) {
+			
+			Object primaryKey = ((IEntidadeBase)entity).getPK();
+			
+			if (this.isNotNull(primaryKey)) {
+				
+				return primaryKey.toString();
+			}
+		}
+		
+		return null;
+	}
+	
+	private boolean isInstanceOfIEntidadeBase(Object entity) {
+		
+		return this.isNotNull(entity) && entity instanceof IEntidadeBase;
+	}
+	
+	private boolean isNotBlank(String value) {
+		
+		return this.isNotNull(value) && !value.trim().isEmpty();
+	}
+	
+	private boolean isNotNull(Object object) {
+		
+		return object != null;
+	}
+	
+	private void addAttribute(UIComponent component, String key, Object value) {
+		
+		if (this.isNotBlank(key) && this.isNotNull(value)) {
+			
+			Map<String, Object> attributes = this.getAttributesFrom(component);
+			
+			if (this.isNotNull(attributes)) {
+				attributes.put(key, value);
+			}
+		}    	
     }  
   
-    protected Map<String, Object> getAttributesFrom(UIComponent component) {
+    private Map<String, Object> getAttributesFrom(UIComponent component) {
     	
-        return component.getAttributes();  
+        return this.isNotNull(component) ? component.getAttributes() : null;  
     }
-
+	
 }
