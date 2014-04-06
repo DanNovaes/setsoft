@@ -15,28 +15,26 @@ import javax.persistence.EmbeddedId;
  */
 public class Filter {
 	
-	Object entity;
-	
 	Map<String, Object> parameters = new HashMap<String, Object>();
 	
 	StringBuilder JPQL = new StringBuilder();
+	
+	static final String ALIAS = "x";
 	
 	boolean enableLike = true;
 
 	private Filter() {}
 	
-	private Filter(Object entity) {
-		
-		super();
-		this.entity = entity;		
-		this.init().generateRestriction(this.entity, "");
+	@SuppressWarnings("rawtypes")
+	private Filter init(Class entityClass) {
+	
+		return this.addRestriction(this.initQuery(entityClass));
 	}
 	
-	private Filter init() {
+	@SuppressWarnings("rawtypes")
+	private String initQuery(Class entityClass) {
 		
-		this.JPQL.append("SELECT x FROM " + this.getClassName() + " x WHERE 1=1");
-	
-		return this;
+		return "SELECT " + Filter.ALIAS + " FROM " + entityClass.getSimpleName() + " " + Filter.ALIAS + " WHERE 1=1";
 	}
 	
 	private Filter generateRestriction(Object entity, String embeddedPath) {
@@ -76,42 +74,53 @@ public class Filter {
 	 */
 	public Filter addRestriction(String fieldName, Object fieldValue, Operator operator) {
 		
-		String fieldNameParam = fieldName.replace(".", "");
 		
 		if (this.isString(fieldValue) && this.isEnableLike()) {
-			this.addQueryString(fieldName, fieldValue, operator);
-			return this;
+			return this.addQueryString(fieldName, fieldValue, operator);
 		}
 		
-		this.JPQL.append(" " + operator.getType() + " x." + fieldName + " =:" + fieldNameParam);
-		this.parameters.put(fieldNameParam, fieldValue);
+		String parameterName = fieldName.replace(".", "");
+		
+		this.addRestriction(operator.getType() + " " + Filter.ALIAS + "." + fieldName + " " + "=:" +  parameterName);
+		
+		this.addParameter(parameterName, fieldValue);
+		
+		return this;
+	}
+	
+	public Filter addRestriction(String restriction) {
+		
+		JPQL.append(" " + restriction);
+		
+		return this;
+	}
+	
+	public Filter addParameter(String parameterName, Object parameterValue) {
+		
+		parameters.put(parameterName, parameterValue);
 		
 		return this;
 	}
 	
 	public Filter addOrderBy(String fieldName) {
 		
-		this.JPQL.append(" Order By x." + fieldName);
-		
-		return this;
+		return this.addRestriction("Order By " + Filter.ALIAS + "." + fieldName);
 	}
 	
-	private void addQueryString(String fieldName, Object fieldValue, Operator operator) {
+	private Filter addQueryString(String fieldName, Object fieldValue, Operator operator) {
 		
-		String fieldNameParam = fieldName.replace(".", "");
+		String parameterName = fieldName.replace(".", "");
 		
-		this.JPQL.append(" " + operator.getType() + " UPPER(x." + fieldName +")" + " Like :" + fieldNameParam);
-		this.parameters.put(fieldNameParam, "%" + fieldValue.toString().trim().toUpperCase() + "%");
+		this.addRestriction(operator.getType() + " " + "UPPER" + "(" + Filter.ALIAS + "." + fieldName + ")" + " " + "Like :" + parameterName);
+		
+		this.addParameter(parameterName, "%" + fieldValue.toString().trim().toUpperCase() + "%");
+		
+		return this;
 	}
 	
 	private boolean isString(Object object) {
 		
 		return object != null && object instanceof String;
-	}
-	
-	private String getClassName() {
-		
-		return this.entity.getClass().getSimpleName();
 	}
 	
 	/**
@@ -163,6 +172,23 @@ public class Filter {
 			throw new IllegalArgumentException("Entity null.");
 		}
 		
-		return new Filter(entity);
-	}	
+		return new Filter().init(entity.getClass()).generateRestriction(entity, "");
+	}
+	
+	/**
+	 * Create a new instance without restriction.
+	 * 
+	 * @param entityClass
+	 * @return a new instance of {@link Filter}
+	 * @author Joel Marques
+	 */
+	@SuppressWarnings("rawtypes")
+	public static Filter create(Class entityClass) {
+		
+		if (entityClass == null) {
+			throw new IllegalArgumentException("Entity null.");
+		}
+		
+		return new Filter().init(entityClass);
+	}
 }
