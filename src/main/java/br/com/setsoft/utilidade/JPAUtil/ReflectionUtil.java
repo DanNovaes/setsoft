@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.Transient;
 
 public final class ReflectionUtil {
 	
@@ -95,6 +96,10 @@ public final class ReflectionUtil {
 		}
 		
 		if (field.isAnnotationPresent(JoinColumn.class) && !ReflectionUtil.isPrimaryKey(fieldValue)) {
+			return true;
+		}
+		
+		if (field.isAnnotationPresent(Transient.class)) {
 			return true;
 		}
 		
